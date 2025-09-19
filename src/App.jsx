@@ -8,16 +8,28 @@ function App() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
-  const [inRecovery, setInRecovery] = useState(false)
+  const [updated, setUpdated] = useState(false)
+  
 
   useEffect(() => {
+    // Normalize accidental whitespace path like '/%20' to '/'
+    try {
+      const rawPath = window.location.pathname || '/'
+      const decodedPath = decodeURIComponent(rawPath)
+      if (decodedPath && decodedPath.trim() === '' || decodedPath === '/%20' || decodedPath === '/ ') {
+        const newUrl = `${window.location.origin}/${window.location.search}${window.location.hash}`
+        window.history.replaceState({}, '', newUrl)
+      }
+    } catch {
+      // ignore path normalization errors
+    }
+
     // Detect recovery mode from URL
     const hash = window.location.hash
     const search = window.location.search
     const params = new URLSearchParams(search || (hash.startsWith('#') ? hash.slice(1) : ''))
     const type = params.get('type')
     if (type === 'recovery') {
-      setInRecovery(true)
       setStatus('Enter your new password below')
     }
 
@@ -35,7 +47,6 @@ function App() {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event) => {
         if (event === 'PASSWORD_RECOVERY') {
-          setInRecovery(true)
           setStatus('Enter your new password below')
         }
       })
@@ -45,6 +56,11 @@ function App() {
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault()
+
+    if (!SUPABASE_READY || !supabase) {
+      setStatus('App is not configured for password updates. Please try again later or contact support.')
+      return
+    }
 
     if (newPassword !== confirmPassword) {
       setStatus('Passwords do not match!')
@@ -64,9 +80,10 @@ function App() {
       if (error) {
         setStatus(`Error: ${error.message}`)
       } else {
-        setStatus('Password updated successfully! ✓')
+        setStatus('Password updated successfully! ✓ You may close this tab or return to the app.')
         setNewPassword('')
         setConfirmPassword('')
+        setUpdated(true)
       }
     } catch (err) {
       setStatus(`Error: ${err.message}`)
@@ -84,8 +101,14 @@ function App() {
   const renderChangePassword = () => (
     <div style={{ marginTop: '1em' }}>
       <h3>Set New Password</h3>
-      <p>Enter your new password below.</p>
-      <form onSubmit={handlePasswordUpdate}>
+      {updated ? (
+        <p>
+          {status || 'Password updated successfully! You may close this tab or return to the app.'}
+        </p>
+      ) : (
+        <>
+        <p>Enter your new password below.</p>
+        <form onSubmit={handlePasswordUpdate}>
         <div style={{ marginBottom: '10px' }}>
           <input
             type="password"
@@ -131,7 +154,9 @@ function App() {
         >
           {loading ? 'Updating...' : 'Update Password'}
         </button>
-      </form>
+        </form>
+        </>
+      )}
     </div>
   )
 
@@ -145,29 +170,7 @@ function App() {
           <sup style={{ fontSize: '0.6em', marginLeft: '4px', color: 'green' }}>™</sup>
         </h1>
 
-        {!SUPABASE_READY ? (
-          <div style={{ marginTop: '1em' }}>
-            <h3>Environment Not Configured</h3>
-            <p>
-              Please create <code>.env.local</code> with:
-            </p>
-            <pre style={{ background: '#f7f7f7', padding: '8px', borderRadius: '4px' }}>
-VITE_SUPABASE_URL=your_url
-VITE_SUPABASE_ANON_KEY=your_anon_key
-            </pre>
-            <p>Then restart the dev server.</p>
-          </div>
-        ) : inRecovery ? (
-          renderChangePassword()
-        ) : (
-          <div style={{ marginTop: '1em' }}>
-            <h3>Open the email link to continue</h3>
-            <p>
-              To change your password, open the reset link sent to your email.
-              This page will automatically show the Change Password form from that link.
-            </p>
-          </div>
-        )}
+        {renderChangePassword()}
 
         {status && (
           <div style={{ marginTop: '1em' }}>
