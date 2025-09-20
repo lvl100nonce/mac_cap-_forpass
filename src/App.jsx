@@ -8,6 +8,7 @@ function App() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
+  const [verified, setVerified] = useState(false)
   const [updated, setUpdated] = useState(false)
   
 
@@ -24,10 +25,31 @@ function App() {
       // ignore path normalization errors
     }
 
-    // Detect recovery mode from URL
-    const hash = window.location.hash
+    // Detect and handle email confirmation (?code=...)
     const search = window.location.search
+    const hash = window.location.hash
     const params = new URLSearchParams(search || (hash.startsWith('#') ? hash.slice(1) : ''))
+    const code = params.get('code')
+    if (code && supabase) {
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ error }) => {
+          if (error) {
+            setStatus(`Error: ${error.message}`)
+          } else {
+            setVerified(true)
+            setStatus('Email verified successfully! You may close this tab or return to the app.')
+          }
+        })
+        .finally(() => {
+          try {
+            // Clean URL
+            const newUrl = `${window.location.origin}/${window.location.hash}`
+            window.history.replaceState({}, '', newUrl)
+          } catch {}
+        })
+    }
+
+    // Detect recovery mode from URL
     const type = params.get('type')
     if (type === 'recovery') {
       setStatus('Enter your new password below')
@@ -100,8 +122,10 @@ function App() {
 
   const renderChangePassword = () => (
     <div style={{ marginTop: '1em' }}>
-      <h3>Set New Password</h3>
-      {updated ? (
+      <h3>{verified ? 'Email Verified' : 'Set New Password'}</h3>
+      {verified ? (
+        <p>{status || 'Email verified successfully! You may close this tab or return to the app.'}</p>
+      ) : updated ? (
         <p>
           {status || 'Password updated successfully! You may close this tab or return to the app.'}
         </p>
