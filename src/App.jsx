@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { supabase } from './supakey'
 import logo from '../assets/logo.png'
 
 // Small helpers to keep try/catch noise out of JSX logic
@@ -27,11 +26,6 @@ function normalizePath() {
 
 function App() {
   const [status, setStatus] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [verified, setVerified] = useState(false)
-  const [updated, setUpdated] = useState(false)
-  const [view, setView] = useState('password')
-  
 
   useEffect(() => {
     // Normalize accidental whitespace path like '/%20'
@@ -45,44 +39,9 @@ function App() {
     )
 
     const getParam = (k) => searchParams.get(k) || hashParams.get(k)
-    const code = getParam('code')
-  const type = getParam('type')
+    const type = getParam('type')
     const err = getParam('error') || getParam('error_code')
     const errDesc = getParam('error_description')
-
-    // Handle email confirmation (?code=...) and hash-based signup links
-    if (code || type === 'signup' || type === 'magiclink') {
-      setView('verifying')
-      setStatus('Verifying email...')
-      if (supabase) {
-        const run = code
-          ? supabase.auth.exchangeCodeForSession(code)
-          : Promise.resolve({ error: null })
-        run
-          .then(async ({ error }) => {
-            if (error) throw error
-            // Confirm we have a user
-            const { data, error: uErr } = await supabase.auth.getUser()
-            if (uErr) throw uErr
-            if (data?.user) {
-              setVerified(true)
-              setView('verified')
-              setStatus('Email verified successfully! You may close this tab or return to the app.')
-            } else {
-              setView('password')
-              setStatus('Email verified. You may close this tab or return to the app.')
-            }
-          })
-          .catch((e) => {
-            setView('password')
-            setStatus(`Error verifying email: ${e.message}`)
-          })
-          .finally(() => {
-            const newUrl = `${window.location.origin}/`
-            safeReplaceUrl(newUrl)
-          })
-      }
-    }
 
     // Recovery flow: send to dedicated change page so UI is focused
     if (type === 'recovery') {
@@ -94,18 +53,7 @@ function App() {
     // Show supabase error params from URL (e.g., otp_expired)
     if (err || errDesc) {
       const readable = decodeURIComponent(errDesc || err || '')
-      setView('password')
       setStatus(readable || 'The link is invalid or has expired. Please request a new email.')
-    }
-
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          setView('password')
-          setStatus('Enter your new password below')
-        }
-      })
-      return () => subscription.unsubscribe()
     }
   }, [])
 
@@ -115,14 +63,10 @@ function App() {
     return 'gray'
   }
 
-  const renderVerification = () => (
+  const renderWelcome = () => (
     <div style={{ marginTop: '1em' }}>
-      <h3>{view === 'verified' ? 'Email Verified' : 'Verifying…'}</h3>
-      <p>
-        {status || (view === 'verified'
-          ? 'Email verified successfully! You may close this tab or return to the app.'
-          : 'Verifying email...')}
-      </p>
+      <h3>Welcome</h3>
+      <p>Click the links in your email to verify your account or reset your password.</p>
     </div>
   )
 
@@ -136,7 +80,7 @@ function App() {
           <sup style={{ fontSize: '0.6em', marginLeft: '4px', color: 'green' }}>™</sup>
         </h1>
 
-  {renderVerification()}
+        {renderWelcome()}
 
         {status && (
           <div style={{ marginTop: '1em' }}>

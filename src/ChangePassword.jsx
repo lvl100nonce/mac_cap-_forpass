@@ -87,7 +87,13 @@ export default function ChangePassword() {
             <>
               <p>Enter your new password below.</p>
               <form onSubmit={handlePasswordUpdate}>
-                <div style={{ marginBottom: '10px' }}>
+                <div style={{ 
+                  marginBottom: '20px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: '12px' 
+                }}>
                   <input
                     type="password"
                     value={newPassword}
@@ -95,12 +101,12 @@ export default function ChangePassword() {
                     placeholder="New password"
                     required
                     style={{
-                      padding: '8px',
-                      width: '250px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      display: 'block',
-                      marginBottom: '8px',
+                      padding: '12px',
+                      width: '280px',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
                     }}
                   />
                   <input
@@ -110,11 +116,12 @@ export default function ChangePassword() {
                     placeholder="Confirm new password"
                     required
                     style={{
-                      padding: '8px',
-                      width: '250px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      display: 'block',
+                      padding: '12px',
+                      width: '280px',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
                     }}
                   />
                 </div>
@@ -122,12 +129,15 @@ export default function ChangePassword() {
                   type="submit"
                   disabled={loading}
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
                     border: 'none',
                     background: '#4CAF50',
                     color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '500',
                     cursor: loading ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.2s ease',
                   }}
                 >
                   {loading ? 'Updating...' : 'Update Password'}
