@@ -65,7 +65,7 @@ function App() {
 
   const renderWelcome = () => (
     <div style={{ marginTop: '1em' }}>
-      <h3>Welcome</h3>
+      <h3 style={{ color: 'green' }}>Welcome</h3>
       <p>Click the links in your email to verify your account or reset your password.</p>
     </div>
   )
