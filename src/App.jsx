@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import logo from '../assets/logo.png'
+import { supabase, SUPABASE_READY } from './supakey'
 
 // Small helpers to keep try/catch noise out of JSX logic
 function safeReplaceUrl(newUrl) {
@@ -26,6 +27,9 @@ function normalizePath() {
 
 function App() {
   const [status, setStatus] = useState('')
+  const [showResend, setShowResend] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [sendingReset, setSendingReset] = useState(false)
 
   useEffect(() => {
     // Normalize accidental whitespace path like '/%20'
@@ -53,9 +57,40 @@ function App() {
     // Show supabase error params from URL (e.g., otp_expired)
     if (err || errDesc) {
       const readable = decodeURIComponent(errDesc || err || '')
+      const lower = (readable || '').toLowerCase()
       setStatus(readable || 'The link is invalid or has expired. Please request a new email.')
+      // show a resend form automatically when the token/otp expired
+      if (lower.includes('expired') || (err && String(err).toLowerCase().includes('expired'))) {
+        setShowResend(true)
+      }
     }
   }, [])
+
+  const sendResetEmail = async (email) => {
+    if (!SUPABASE_READY || !supabase) {
+      setStatus('App is not configured to send reset emails. Contact support.')
+      return
+    }
+    if (!email) {
+      setStatus('Please enter your email address')
+      return
+    }
+    try {
+      setSendingReset(true)
+      setStatus('')
+      const redirectTo = `${window.location.origin}/change`
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+      if (error) {
+        setStatus(`Error sending reset email: ${error.message}`)
+      } else {
+        setStatus('Reset email sent — check your inbox.')
+        setShowResend(false)
+      }
+    } catch (err) {
+      setStatus(`Error: ${err.message}`)
+    }
+    setSendingReset(false)
+  }
 
   const getStatusColor = () => {
     if (status.includes('successfully') || status.includes('✓')) return 'green'
@@ -85,6 +120,28 @@ function App() {
         {status && (
           <div style={{ marginTop: '1em' }}>
             <p style={{ color: getStatusColor(), fontWeight: 'bold' }}>{status}</p>
+          </div>
+        )}
+
+        {showResend && (
+          <div style={{ marginTop: '1em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <p style={{ margin: 0 }}>Enter your email to receive a new reset link:</p>
+            <input
+              type="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{ padding: '8px 10px', width: '260px', borderRadius: '6px', border: '1px solid #ddd' }}
+            />
+            <div>
+              <button
+                onClick={() => sendResetEmail(resetEmail)}
+                disabled={sendingReset}
+                style={{ marginTop: '6px', background: '#4CAF50', color: 'white' }}
+              >
+                {sendingReset ? 'Sending...' : 'Send reset email'}
+              </button>
+            </div>
           </div>
         )}
       </div>
