@@ -22,6 +22,33 @@ export default function ChangePassword() {
     const err = getParam('error') || getParam('error_code')
     const errDesc = getParam('error_description')
 
+    // Try to restore Supabase session from URL (supports v2 and fallback)
+    const restoreSessionFromUrl = async () => {
+      if (!SUPABASE_READY || !supabase) return
+      try {
+        // Preferred: use client helper when available
+        if (typeof supabase.auth.getSessionFromUrl === 'function') {
+          const { error } = await supabase.auth.getSessionFromUrl({ storeSession: true })
+          if (error) console.debug('getSessionFromUrl error', error.message)
+          return
+        }
+
+        // Fallback: parse hash for access_token and refresh_token
+        const hash = window.location.hash && window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+        if (!hash) return
+        const params = new URLSearchParams(hash)
+        const access_token = params.get('access_token')
+        const refresh_token = params.get('refresh_token')
+        if (access_token && refresh_token && typeof supabase.auth.setSession === 'function') {
+          await supabase.auth.setSession({ access_token, refresh_token })
+        }
+      } catch (e) {
+        console.debug('session restore failed', e?.message || e)
+      }
+    }
+
+    restoreSessionFromUrl()
+
     if (type === 'recovery') {
       setStatus('Enter your new password below')
     }
